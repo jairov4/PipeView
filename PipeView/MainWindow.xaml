@@ -1,0 +1,34 @@
+﻿<Window x:Class="PipeView.MainWindow"
+		xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+		xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+		xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+		xmlns:scichart="http://schemas.abtsoftware.co.uk/scichart"
+		xmlns:local="clr-namespace:PipeView"
+		mc:Ignorable="d"
+		Title="MainWindow" Height="350" Width="525">
+	<DockPanel LastChildFill="True">
+		<StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
+			<TextBlock Margin="10,0">Size: </TextBlock>
+			<TextBox Width="90" x:Name="txtSizeBox" Text="5000" TextAlignment="Right" />
+			<Button Margin="10,0" Content="Load data" Click="btnLoadData_OnClick" />
+			<Button Click="btnClear_OnClick">Clear</Button>
+			<TextBlock x:Name="txtStatus" />
+		</StackPanel>
+		<scichart:SciChartScrollbar ZoomLimit="1" Height="20" GripsLength="10" Axis="{Binding ElementName=chart, Path=XAxis}"
+									DockPanel.Dock="Bottom" />
+		<scichart:SciChartSurface x:Name="chart">
+			<scichart:SciChartSurface.XAxis>
+				<scichart:NumericAxis VisibleRangeLimit="0,200000" />
+			</scichart:SciChartSurface.XAxis>
+			<scichart:SciChartSurface.YAxis>
+				<scichart:NumericAxis AxisAlignment="Left" VisibleRangeLimit="0,6.28" VisibleRange="0,6.28" />
+			</scichart:SciChartSurface.YAxis>
+			<scichart:SciChartSurface.ChartModifier>
+				<scichart:ModifierGroup>
+					<local:NumericAxesMouseModifier />
+				</scichart:ModifierGroup>
+			</scichart:SciChartSurface.ChartModifier>
+		</scichart:SciChartSurface>
+	</DockPanel>
+</Window>
