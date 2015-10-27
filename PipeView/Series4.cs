@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows;
+using System.Windows.Media;
+using Abt.Controls.SciChart.Numerics.CoordinateCalculators;
+using Abt.Controls.SciChart.Rendering.Common;
 using TReal = System.Single;
 
 namespace PipeView
@@ -15,12 +18,163 @@ namespace PipeView
 		{
 			var idx = Count;
 			base.AppendCore(x, y, w, h, atts);
+			/*
 			for (var i = idx; i < Count; i++)
 			{
 				Insert(i, rootNode.Height - 1);
 			}
+			*/
+			BulkInsert(idx);
 		}
-		
+
+		private void BulkInsert(int begin)
+		{
+			var node = Build(0, Count - 1, 0);
+			rootNode = node;
+		}
+
+		private TreeNode Build(int begin, int endInclusive, int height)
+		{
+			var N = endInclusive - begin + 1;
+			var M = MaxItemsPerNode;
+			var node = new TreeNode();
+
+			if (M <= N)
+			{
+				node.Height = 1;
+				node.Data.AddRange(Enumerable.Range(begin, N));
+				RecomputeBoundingBox(node);
+				return node;
+			}
+
+			if (height == 0)
+			{
+				// target height of the bulk-loaded tree
+				height = (int)Math.Ceiling(Math.Log(N) / Math.Log(M));
+
+				// target number of root entries to maximize storage utilization
+				M = (int)Math.Ceiling(N / Math.Pow(M, height - 1));
+			}
+
+			node.Height = height;
+
+			var N2 = N/M + (N % M > 0 ? 1 : 0);
+			var N1 = N2*(int) Math.Ceiling(Math.Sqrt(M));
+			MultiSelect(begin, endInclusive, N1, (i1, i2) => MultiSelectCompareByIndices(x, i1, i2));
+
+			for (var i = begin; i <= endInclusive; i += N1)
+			{
+				var right2 = Math.Min(i + N1 - 1, endInclusive);
+				MultiSelect(i, right2, N2, (i1, i2) => MultiSelectCompareByIndices(y, i1, i2));
+
+				for (var j = i; j <= right2; j += N2)
+				{
+					var right3 = Math.Min(j + N2 - 1, right2);
+
+					// pack each entry recursively
+					var n = Build(j, right3, height - 1);
+					node.Nodes.Add(n);
+				}
+			}
+
+			RecomputeBoundingBox(node);
+			return node;
+		}
+
+		private void MultiSelect(int left, int right, int n, Comparison<int> comparer)
+		{
+			var stack = new Stack<int>();
+			stack.Push(left);
+			stack.Push(right);
+
+			while (stack.Count > 0)
+			{
+				right = stack.Pop();
+				left = stack.Pop();
+
+				if (right - left <= n) continue;
+
+				var rl = right - left;
+				var n2 = n*2;
+				var div = rl/n2 + (rl%n2 > 0 ? 1 : 0);
+
+				var mid = left + div * n;
+				Select(left, right, mid, comparer);
+
+				stack.Push(left);
+				stack.Push(mid);
+				stack.Push(mid);
+				stack.Push(right);
+			}
+		}
+
+		private void Select(int left, int right, int k, Comparison<int> comparer)
+		{
+			while (right > left)
+			{
+				int i;
+				if (right - left > 600)
+				{
+					var n = right - left + 1;
+					i = k - left + 1;
+					var z = Math.Log(n);
+					var s = 0.5 * Math.Exp(2 * z / 3);
+					var sd = 0.5 * Math.Sqrt(z * s * (n - s) / n) * (i - n / 2 < 0 ? -1 : 1);
+					var newLeft = (int)Math.Max(left, Math.Floor(k - i * s / n + sd));
+					var newRight = (int)Math.Min(right, Math.Floor(k + (n - i) * s / n + sd));
+					Select(newLeft, newRight, k, comparer);
+				}
+				
+				i = left;
+				var j = right;
+
+				MultiSelectSwapByIndices(left, k);
+				if (comparer(right, k) > 0) MultiSelectSwapByIndices(left, right);
+
+				while (i < j)
+				{
+					MultiSelectSwapByIndices(i, j);
+					i++;
+					j--;
+					while (comparer(i, k) < 0) i++;
+					while (comparer(j, k) > 0) j--;
+				}
+
+				if (comparer(left, k) == 0) MultiSelectSwapByIndices(left, j);
+				else
+				{
+					j++;
+					MultiSelectSwapByIndices(j, right);
+				}
+
+				if (j <= k) left = j + 1;
+				if (k <= j) right = j - 1;
+			}
+		}
+
+		private void MultiSelectSwapByIndices(int i, int j)
+		{
+			ItemsSwap(x, i, j);
+			ItemsSwap(y, i, j);
+			ItemsSwap(w, i, j);
+			ItemsSwap(h, i, j);
+			ItemsSwap(attributeValues, i, j);
+		}
+
+		void ItemsSwap<T>(IList<T> l, int a, int b)
+		{
+			var tmp = l[a];
+			l[a] = l[b];
+			l[b] = tmp;
+		}
+
+		private int MultiSelectCompareByIndices(IReadOnlyList<TReal> l, int i, int j)
+		{
+			var e = Math.Abs(l[i] - l[j]) < 1024*TReal.Epsilon;
+			if (e) return 0;
+			return l[i] < l[j] ? -1 : 1;
+		}
+
 		private void Insert(int item, int level)
 		{
 			var path = new List<TreeNode>(level);
@@ -405,6 +559,19 @@ namespace PipeView
 		public Series4(int maxItemsPerNode, int capacity, IReadOnlyList<string> names, IReadOnlyList<Type> types) : base(capacity, names, types)
 		{
 			MaxItemsPerNode = maxItemsPerNode;
+		}
+
+		public void DrawNodes(IRenderContext2D renderContext, ICoordinateCalculator<double> xc, ICoordinateCalculator<double> yc, Rect area, float pixSizeX, float pixSizeY)
+		{
+			var pen = renderContext.CreatePen(Colors.Brown, false, 1);
+			var nodes = FindNodesWithDecimation(area, pixSizeX, pixSizeY);
+			foreach (var node in nodes)
+			{
+				var p1 = new Point(xc.GetCoordinate(node.HorizontalRange.Min), yc.GetCoordinate(node.VerticalRange.Min));
+				var p2 = new Point(xc.GetCoordinate(node.HorizontalRange.Max), yc.GetCoordinate(node.VerticalRange.Max));
+				renderContext.DrawQuad(pen, p1, p2);
+			}
+			pen.Dispose();
 		}
 	}
 }
