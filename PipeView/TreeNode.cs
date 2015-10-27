@@ -23,7 +23,7 @@ namespace PipeView
 		public Rect Rect => new Rect(HorizontalRange.Min, VerticalRange.Min, HorizontalRange.Diff, VerticalRange.Diff);
 
 		public bool IsRoot => Parent == null;
-		public bool HasData => Data.Any() || Nodes.Any();
+		public bool HasData => Data.Count != 0 || Nodes.Count != 0;
 
 		public IEnumerable<int> EnumerateAll()
 		{

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Windows;
 using TReal = System.Single;
 
@@ -12,23 +13,14 @@ namespace PipeView
 
 		public override void AppendCore(ICollection<TReal> x, ICollection<TReal> y, ICollection<TReal> w, ICollection<TReal> h, ICollection<object> atts)
 		{
-			AppendSingle(x, y, w, h, atts);
-			//AppendBulk(x, y, w, h, atts);
-		}
-
-		private void AppendSingle(ICollection<TReal> x, ICollection<TReal> y, ICollection<TReal> w, ICollection<TReal> h, ICollection<object> atts)
-		{
 			var idx = Count;
 			base.AppendCore(x, y, w, h, atts);
 			for (var i = idx; i < Count; i++)
 			{
-				//var rect = new Rect(XValues[i], YValues[i], WidthValues[i], HeightValues[i]);
-				//var nodes = FindNodes(rect, false);
-				//AddPoint(nodes, i, rect);
 				Insert(i, rootNode.Height - 1);
 			}
 		}
-
+		
 		private void Insert(int item, int level)
 		{
 			var path = new List<TreeNode>(level);
@@ -66,12 +58,20 @@ namespace PipeView
 				var minElargement = TReal.MaxValue;
 				
 				TreeNode targetNode = null;
+				var xAndW = (TReal)bbox.Right;
+				var yAndH = (TReal)bbox.Bottom;
+				var xx = (TReal) bbox.X;
+				var yy = (TReal)bbox.Y;
 				foreach (var child in node.Nodes)
 				{
-					var r = child.Rect;
 					var area = child.HorizontalRange.Diff*child.VerticalRange.Diff;
-					r.Union(bbox);
-					var enlargement = r.Width*r.Height - area;
+					//var r = child.Rect;
+					//r.Union(bbox);
+					//var enlargement = r.Width * r.Height - area;
+					var enlargedArea = 
+						(Max(xAndW, child.HorizontalRange.Max) - Min(xx, child.HorizontalRange.Min))*
+						(Max(yAndH, child.VerticalRange.Max) - Min(yy, child.VerticalRange.Min));
+					var enlargement = enlargedArea - area;
 					if (enlargement < minElargement)
 					{
 						minElargement = (TReal) enlargement;
@@ -101,159 +101,6 @@ namespace PipeView
 			var wv = WidthValues[i];
 			var hv = HeightValues[i];
 			return new Rect(xv, yv, wv, hv);
-		}
-
-		public void AppendBulk(ICollection<TReal> x, ICollection<TReal> y, ICollection<TReal> w, ICollection<TReal> h, ICollection<object> atts)
-		{
-			var idx = Count;
-			base.AppendCore(x, y, w, h, atts);
-			var minx = TReal.MaxValue;
-			var maxx = TReal.MinValue;
-			var miny = TReal.MaxValue;
-			var maxy = TReal.MinValue;
-			for(var i = idx; i < Count; i++)
-			{
-				minx = Math.Min(minx, XValues[i]);
-				maxx = Math.Max(maxx, XValues[i] + WidthValues[i]);
-				miny = Math.Min(miny, YValues[i]);
-				maxy = Math.Max(maxy, YValues[i] + HeightValues[i]);
-			}
-
-			var width = maxx - minx;
-			var height = maxy - miny;
-
-			var added = Count - idx;
-			var densityX = width / added;
-			var densityY = height / added;
-
-			var blockSizeXTarget = 128*densityX;
-			var blocksPerRow = 4;
-			TReal blockSizeX= width / blocksPerRow;
-			while (blockSizeX > blockSizeXTarget)
-			{
-				blocksPerRow *= 2;
-				blockSizeX = width / blocksPerRow;
-			}
-			
-			var blockSizeYTarget = 128*densityY;
-			var blocksPerCol = 4;
-			TReal blockSizeY = height / blocksPerCol;
-			while (blockSizeY > blockSizeYTarget)
-			{
-				blocksPerCol *= 2;
-				blockSizeY = height / blocksPerCol;
-			}
-
-			var leaves = new Dictionary<int, TreeNode>();
-			for (var i = idx; i < Count; i++)
-			{
-				var xv = XValues[i] - minx;
-				var yv = YValues[i] - miny;
-				var bx = (int) (xv/blockSizeX);
-				var by = (int) (yv/blockSizeY);
-				var bid = bx*blocksPerCol + by;
-				TreeNode block;
-				if (!leaves.TryGetValue(bid, out block))
-				{
-					block = new TreeNode();
-					leaves.Add(bid, block);
-				}
-				block.Data.Add(i);
-			}
-
-			var l = new List<TreeNode>(leaves.Values);
-			foreach (var treeNode in l)
-			{
-				RecomputeBoundingBox(treeNode);
-			}
-			l.Sort((r, v) => r.HorizontalRange.Min < v.HorizontalRange.Min ? -1 : 1);
-			
-			var group = new Dictionary<int, TreeNode>();
-			while (blocksPerCol > 0 && blocksPerRow > 0)
-			{
-				// itera sobre el rango original
-				for (int bx = 0; bx < blocksPerRow; bx += 2)
-				{
-					for (int by = 0; by < blocksPerCol; by += 2)
-					{
-						var newNode = new TreeNode();
-						// crea un id en un rango nuevo
-						var blockId = bx/2*blocksPerCol/2 + by/2;
-						
-						for (int i = 0; i < 2; i++)
-						{
-							for (int j = 0; i < 2; i++)
-							{
-								if (bx + i >= blocksPerRow) continue;
-								if (by + j >= blocksPerCol) continue;
-								// crea id en el rango original
-								var bid = (bx + i)*blocksPerCol + (by + j);
-								TreeNode n;
-								if (leaves.TryGetValue(idx, out n))
-								{
-									newNode.Nodes.Add(n);
-									n.Parent = newNode;
-									RecomputeBoundingBox(n);
-								}
-							}
-						}
-
-						if (newNode.HasData)
-						{
-							group.Add(blockId, newNode);
-						}
-					}
-				}
-				var tmp = leaves;
-				leaves = group;
-				group = tmp;
-				group.Clear();
-
-				blocksPerCol /= 2;
-				blocksPerRow /= 2;
-			}
-
-			var root = new TreeNode();
-			RecomputeBoundingBox(root);
-			root.Nodes.AddRange(leaves.Values);
-			foreach (var value in leaves.Values)
-			{
-				value.Parent = root;
-				RecomputeBoundingBox(value);
-			}
-
-			rootNode = root;
-		}
-
-		private void AddPoint(IEnumerable<TreeNode> nodes, int i, Rect rect)
-		{
-			var node = rootNode;
-			foreach (var quadTreeNode in nodes)
-			{
-				node = quadTreeNode;
-				if (quadTreeNode.IsLeaf)
-				{
-					break;
-				}
-			}
-
-			if (!node.IsLeaf)
-			{
-				node = SearchLeafToExtend(node.EnumerateLeafs(), rect);
-			}
-
-			if (node.Data.Count >= MaxItemsPerNode)
-			{
-				var newNode = Split(node);
-				node = SearchLeafToExtend(new[] {newNode, node}, rect);
-			}
-
-			if (!node.Rect.Contains(rect))
-			{
-				Extend(node, rect);
-			}
-
-			node.Data.Add(i);
 		}
 		
 		private TreeNode Split(TreeNode found)
@@ -383,6 +230,18 @@ namespace PipeView
 			node.VerticalRange = new VisibleRange(ymin, ymax);
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		static TReal Max(TReal a,TReal b)
+		{
+			return a < b ? b : a;
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		static TReal Min(TReal a, TReal b)
+		{
+			return a < b ? a : b;
+		}
+
 		private void ComputeBoundingBox(TreeNode node, int start,int end, out float xmin, out float xmax, out float ymin, out float ymax)
 		{
 			xmax = TReal.MinValue; xmin = TReal.MaxValue;
@@ -395,10 +254,10 @@ namespace PipeView
 				for (var j = start; j < end; j++)
 				{
 					var i = node.Data[j];
-					xmax = Math.Max(xmax, XValues[i] + WidthValues[i]);
-					xmin = Math.Min(xmin, XValues[i]);
-					ymax = Math.Max(ymax, YValues[i] + HeightValues[i]);
-					ymin = Math.Min(ymin, YValues[i]);
+					xmax = Max(xmax, XValues[i] + WidthValues[i]);
+					xmin = Min(xmin, XValues[i]);
+					ymax = Max(ymax, YValues[i] + HeightValues[i]);
+					ymin = Min(ymin, YValues[i]);
 				}
 			}
 			else
@@ -408,10 +267,10 @@ namespace PipeView
 				for (var j = start; j < end; j++)
 				{
 					var child = node.Nodes[j];
-					xmin = Math.Min(xmin, child.HorizontalRange.Min);
-					xmax = Math.Max(xmax, child.HorizontalRange.Max);
-					ymin = Math.Min(ymin, child.VerticalRange.Min);
-					ymax = Math.Max(ymax, child.VerticalRange.Max);
+					xmin = Min(xmin, child.HorizontalRange.Min);
+					xmax = Max(xmax, child.HorizontalRange.Max);
+					ymin = Min(ymin, child.VerticalRange.Min);
+					ymax = Max(ymax, child.VerticalRange.Max);
 				}
 			}
 		}

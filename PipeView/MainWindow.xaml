@@ -19,7 +19,7 @@
 									DockPanel.Dock="Bottom" />
 		<scichart:SciChartSurface x:Name="chart">
 			<scichart:SciChartSurface.XAxis>
-				<scichart:NumericAxis VisibleRangeLimit="0,200000" />
+				<scichart:NumericAxis VisibleRangeLimit="0,250000" />
 			</scichart:SciChartSurface.XAxis>
 			<scichart:SciChartSurface.YAxis>
 				<scichart:NumericAxis AxisAlignment="Left" VisibleRangeLimit="0,6.28" VisibleRange="0,6.28" />

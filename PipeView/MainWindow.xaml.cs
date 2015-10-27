@@ -102,7 +102,7 @@ namespace PipeView
 				var x = rnd.NextDouble()*250000.0;
 				var y = rnd.NextDouble()*2*Math.PI;
 				var w = rnd.NextDouble()*3.0;
-				var h = rnd.NextDouble()*Math.PI/4;
+				var h = rnd.NextDouble()*Math.PI/10;
 				var type = types[rnd.Next(types.Length)];
 				var value = new DataStreamValue(new object[] { (TReal)x, (TReal)y, (TReal)w, (TReal)h, type});
 				yield return value;

@@ -27,7 +27,7 @@ namespace PipeView
 			// README Check series
 			var series = new Series4(names, types);
 			
-			const int chunkSize = 10000;
+			const int chunkSize = 2000000;
 			var x = new List<TReal>(chunkSize); var y = new List<TReal>(chunkSize);
 			var h = new List<TReal>(chunkSize); var w = new List<TReal>(chunkSize);
 			var atts = new List<object>(chunkSize*nameIndices.Length);
@@ -46,7 +46,11 @@ namespace PipeView
 					w.Add((TReal)dataStreamValue.Values[wI]);
 					h.Add((TReal)dataStreamValue.Values[hI]);
 				}
-				series.Append(x, y, w, h, atts);
+
+				using (chart.SuspendUpdates())
+				{
+					series.Append(x, y, w, h, atts);
+				}
 				UpdateStatus();
 			}, () => VisualStateManager.GoToState(this, "Idle", true));
 
