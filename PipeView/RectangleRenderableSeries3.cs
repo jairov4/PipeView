@@ -24,8 +24,9 @@ namespace PipeView
 			var xrange = surf.XAxis.VisibleRange.AsDoubleRange();
 			var yrange = surf.YAxis.VisibleRange.AsDoubleRange();
 			var area = new Rect(xrange.Min, yrange.Min, xrange.Diff, yrange.Diff);
-			var pixSizeX = (TReal)Math.Abs(xcal.GetDataValue(1.0) - xcal.GetDataValue(0.0));
-			var pixSizeY = (TReal)Math.Abs(ycal.GetDataValue(0.0) - ycal.GetDataValue(1.0));
+			var pixTakeCare = 3;
+			var pixSizeX = (TReal)Math.Abs(xcal.GetDataValue(pixTakeCare) - xcal.GetDataValue(0.0));
+			var pixSizeY = (TReal)Math.Abs(ycal.GetDataValue(0.0) - ycal.GetDataValue(pixTakeCare));
 			var found = DataSeries.FindInArea(area, pixSizeX, pixSizeY);
 			var brush = renderContext.CreateBrush(new SolidColorBrush(Colors.BlueViolet));
 			var pen = renderContext.CreatePen(Colors.Black, false, 1);
@@ -37,7 +38,7 @@ namespace PipeView
 			pen.Dispose();
 
 			var sdbg = DataSeries as Series4;
-			sdbg.DrawNodes(renderContext, xcal, ycal, area, pixSizeX, pixSizeY);
+			//sdbg.DrawNodes(renderContext, xcal, ycal, area, pixSizeX, pixSizeY);
 		}
 	}
 }

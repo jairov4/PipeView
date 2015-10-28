@@ -29,17 +29,54 @@ namespace PipeView
 
 		private void BulkInsert(int begin)
 		{
-			var node = Build(0, Count - 1, 0);
-			rootNode = node;
-		}
+			if (Count - begin < MinItemsPerNode)
+			{
+				for (var i = begin; i < Count; i++)
+				{
+					Insert(i, rootNode.Height - 1);
+				}
+				return;
+			}
 
+			var node = Build(begin, Count - 1, 0);
+			
+			if (!rootNode.HasData)
+			{
+				// save as is if tree is empty
+				rootNode = node;
+			}
+			else if (this.rootNode.Height == node.Height)
+			{
+				// split root if trees have the same height
+				var newNode = new TreeNode();
+				newNode.Height = rootNode.Height + 1;
+				newNode.Nodes.Add(rootNode);
+				newNode.Nodes.Add(node);
+				RecomputeBoundingBox(newNode);
+				rootNode = newNode;
+			}
+			else
+			{
+				if (rootNode.Height < node.Height)
+				{
+					// swap trees if inserted one is bigger
+					var tmpNode = rootNode;
+					rootNode = node;
+					node = tmpNode;
+				}
+
+				// insert the small tree into the large tree at appropriate level
+				InsertNode(node, rootNode.Height - node.Height - 1);
+			}
+		}
+		
 		private TreeNode Build(int begin, int endInclusive, int height)
 		{
 			var N = endInclusive - begin + 1;
 			var M = MaxItemsPerNode;
 			var node = new TreeNode();
 
-			if (M <= N)
+			if (N <= M)
 			{
 				node.Height = 1;
 				node.Data.AddRange(Enumerable.Range(begin, N));
@@ -60,12 +97,12 @@ namespace PipeView
 
 			var N2 = N/M + (N % M > 0 ? 1 : 0);
 			var N1 = N2*(int) Math.Ceiling(Math.Sqrt(M));
-			MultiSelect(begin, endInclusive, N1, (i1, i2) => MultiSelectCompareByIndices(x, i1, i2));
+			MultiSelect(begin, endInclusive, N1, x);
 
 			for (var i = begin; i <= endInclusive; i += N1)
 			{
 				var right2 = Math.Min(i + N1 - 1, endInclusive);
-				MultiSelect(i, right2, N2, (i1, i2) => MultiSelectCompareByIndices(y, i1, i2));
+				MultiSelect(i, right2, N2, y);
 
 				for (var j = i; j <= right2; j += N2)
 				{
@@ -81,7 +118,7 @@ namespace PipeView
 			return node;
 		}
 
-		private void MultiSelect(int left, int right, int n, Comparison<int> comparer)
+		private void MultiSelect(int left, int right, int n, IReadOnlyList<TReal> arr)
 		{
 			var stack = new Stack<int>();
 			stack.Push(left);
@@ -99,7 +136,7 @@ namespace PipeView
 				var div = rl/n2 + (rl%n2 > 0 ? 1 : 0);
 
 				var mid = left + div * n;
-				Select(left, right, mid, comparer);
+				Select(left, right, mid, arr);
 
 				stack.Push(left);
 				stack.Push(mid);
@@ -108,7 +145,7 @@ namespace PipeView
 			}
 		}
 
-		private void Select(int left, int right, int k, Comparison<int> comparer)
+		private void Select(int left, int right, int k, IReadOnlyList<TReal> arr)
 		{
 			while (right > left)
 			{
@@ -119,28 +156,36 @@ namespace PipeView
 					i = k - left + 1;
 					var z = Math.Log(n);
 					var s = 0.5 * Math.Exp(2 * z / 3);
-					var sd = 0.5 * Math.Sqrt(z * s * (n - s) / n) * (i - n / 2 < 0 ? -1 : 1);
-					var newLeft = (int)Math.Max(left, Math.Floor(k - i * s / n + sd));
-					var newRight = (int)Math.Min(right, Math.Floor(k + (n - i) * s / n + sd));
-					Select(newLeft, newRight, k, comparer);
+					var sd = 0.5 * Math.Sqrt(z * s * (n - s) / n) * Math.Sign(i - n / 2);
+					var newLeft = (int)Math.Max(left, k - i * s / n + sd);
+					var newRight = (int)Math.Min(right, k + (n - i) * s / n + sd);
+					Select(newLeft, newRight, k, arr);
 				}
 				
 				i = left;
 				var j = right;
+				var t = arr[k];
 
 				MultiSelectSwapByIndices(left, k);
-				if (comparer(right, k) > 0) MultiSelectSwapByIndices(left, right);
+				
+				if (arr[right] > t)
+				{
+					MultiSelectSwapByIndices(right, left);
+				}
 
 				while (i < j)
 				{
 					MultiSelectSwapByIndices(i, j);
 					i++;
 					j--;
-					while (comparer(i, k) < 0) i++;
-					while (comparer(j, k) > 0) j--;
+					while (arr[i] < t) i++;
+					while (arr[j] > t) j--;
 				}
 
-				if (comparer(left, k) == 0) MultiSelectSwapByIndices(left, j);
+				if (Math.Abs(arr[left] - t) < 2048*TReal.Epsilon)
+				{
+					MultiSelectSwapByIndices(left, j);
+				}
 				else
 				{
 					j++;
@@ -167,12 +212,32 @@ namespace PipeView
 			l[a] = l[b];
 			l[b] = tmp;
 		}
-
-		private int MultiSelectCompareByIndices(IReadOnlyList<TReal> l, int i, int j)
+		
+		private void InsertNode(TreeNode item, int level)
 		{
-			var e = Math.Abs(l[i] - l[j]) < 1024*TReal.Epsilon;
-			if (e) return 0;
-			return l[i] < l[j] ? -1 : 1;
+			var path = new List<TreeNode>(level);
+			var bbox = item.Rect;
+			TreeNode node;
+			ChooseSubTree(bbox, level, rootNode, path, out node);
+			node.Nodes.Add(item);
+			Extend(node, bbox);
+			while (level >= 0)
+			{
+				var currentNode = path[level];
+				if ((currentNode.IsLeaf && currentNode.Data.Count > MaxItemsPerNode) ||
+					(!currentNode.IsLeaf && currentNode.Nodes.Count > MaxItemsPerNode))
+				{
+					var n = Split(currentNode);
+					path.Add(n);
+					level--;
+				}
+				else break;
+			}
+
+			foreach (var treeNode in path)
+			{
+				RecomputeBoundingBox(treeNode);
+			}
 		}
 
 		private void Insert(int item, int level)
@@ -256,11 +321,11 @@ namespace PipeView
 			var hv = HeightValues[i];
 			return new Rect(xv, yv, wv, hv);
 		}
-		
+
+		const int MinItemsPerNode = 6;
+
 		private TreeNode Split(TreeNode found)
 		{
-			const int MinItemsPerNode = 4;
-
 			// choose split axis
 			found.Data.Sort((i, j) => XValues[i] < XValues[j] ? -1 : 1);
 			TReal xmargin = CalcAllDistributionsMargin(found, MinItemsPerNode, MaxItemsPerNode);
@@ -490,6 +555,21 @@ namespace PipeView
 			}
 		}
 
+		private IEnumerable<TreeNode> FindNodes(Point p, bool leafsOnly)
+		{
+			var remaining = new List<TreeNode> { rootNode };
+			for (var i = 0; i < remaining.Count; i++)
+			{
+				var node = remaining[i];
+				if (!node.Rect.Contains(p)) continue;
+				remaining.AddRange(node.Nodes);
+				if (node.IsLeaf || !leafsOnly)
+				{
+					yield return node;
+				}
+			}
+		}
+
 		public override IEnumerable<int> FindInArea(Rect area)
 		{
 			var nodes = FindNodes(area, true);
@@ -572,6 +652,30 @@ namespace PipeView
 				renderContext.DrawQuad(pen, p1, p2);
 			}
 			pen.Dispose();
+		}
+
+		public override int? FindNearest(Point point)
+		{
+			var nn = FindNodes(point, true);
+			var minR = double.MaxValue;
+			int? found = null;
+			foreach (var n in nn)
+			{
+				foreach (var i in n.Data)
+				{
+					var x = XValues[i] + WidthValues[i]/2;
+					var y = YValues[i] + HeightValues[i]/2;
+					var dx = point.X - x;
+					var dy = point.Y - y;
+					var r = Math.Sqrt(dx*dx + dy*dy);
+					if (r < minR)
+					{
+						minR = r;
+						found = i;
+					}
+				}
+			}
+			return found;
 		}
 	}
 }

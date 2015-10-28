@@ -38,11 +38,11 @@ namespace PipeView
 
 		public virtual void AppendCore(ICollection<TReal> x, ICollection<TReal> y, ICollection<TReal> w, ICollection<TReal> h, ICollection<object> atts)
 		{
-			this.x.AddRange(x);
 			this.y.AddRange(y);
 			this.w.AddRange(w);
 			this.h.AddRange(h);
 			this.attributeValues.AddRange(atts);
+			this.x.AddRange(x);
 
 			var min = Math.Min(x.Min(), XRange.Min);
 			var max = Math.Max(x.Zip(w, (a, b) => a + b).Max(), XRange.Max);

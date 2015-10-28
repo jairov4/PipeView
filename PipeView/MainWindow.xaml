@@ -7,6 +7,8 @@
 		xmlns:local="clr-namespace:PipeView"
 		mc:Ignorable="d"
 		Title="MainWindow" Height="350" Width="525">
+	<Window.Resources>
+	</Window.Resources>
 	<DockPanel LastChildFill="True">
 		<StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
 			<TextBlock Margin="10,0">Size: </TextBlock>
@@ -27,6 +29,7 @@
 			<scichart:SciChartSurface.ChartModifier>
 				<scichart:ModifierGroup>
 					<local:NumericAxesMouseModifier />
+					<local:TooltipModifier />
 				</scichart:ModifierGroup>
 			</scichart:SciChartSurface.ChartModifier>
 		</scichart:SciChartSurface>

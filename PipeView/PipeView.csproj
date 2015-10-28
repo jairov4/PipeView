@@ -99,6 +99,7 @@
     <Compile Include="ISeriesWithAttributes.cs" />
     <Compile Include="LinqHelper.cs" />
     <Compile Include="RectangleRenderableSeries3.cs" />
+    <Compile Include="TooltipModifier.cs" />
     <Compile Include="TreeNode.cs" />
     <Compile Include="RectangleRenderableSeries2.cs" />
     <Compile Include="Series1.cs" />

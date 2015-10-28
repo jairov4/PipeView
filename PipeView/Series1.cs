@@ -75,9 +75,9 @@ namespace PipeView
 			{
 				var x = XValues[i] + WidthValues[i]/2;
 				var y = YValues[i]+ HeightValues[i]/2;
-				var xx = Math.Abs(x - point.X);
-				var yy = Math.Abs(y - point.Y);
-				var d = xx*xx + yy*yy;
+				var xx = x - point.X;
+				var yy = y - point.Y;
+				var d = Math.Sqrt(xx*xx + yy*yy);
 				if (d < k)
 				{
 					k = d;

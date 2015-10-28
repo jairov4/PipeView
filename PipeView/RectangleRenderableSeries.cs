@@ -12,6 +12,7 @@ using Abt.Controls.SciChart.Numerics.PointResamplers;
 using Abt.Controls.SciChart.Rendering.Common;
 using Abt.Controls.SciChart.Visuals;
 using Abt.Controls.SciChart.Visuals.RenderableSeries;
+using TReal = System.Single;
 
 namespace PipeView
 {
@@ -152,7 +153,8 @@ namespace PipeView
 
 			public int FindClosestPoint(IComparable x, IComparable y, double xyScaleRatio, double maxXDistance)
 			{
-				throw new NotSupportedException();
+				var r = series.FindNearest(new Point((double) x, (double) y));
+				return r ?? 0;
 			}
 
 			public int FindClosestLine(IComparable x, IComparable y, double xyScaleRatio, double xRadius, LineDrawMode drawNanAs)

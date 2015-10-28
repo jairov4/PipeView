@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Documents;
@@ -27,36 +28,65 @@ namespace PipeView
 			// README Check series
 			var series = new Series4(names, types);
 			
-			const int chunkSize = 2000000;
+			const int chunkSize = 500000;
 			var x = new List<TReal>(chunkSize); var y = new List<TReal>(chunkSize);
 			var h = new List<TReal>(chunkSize); var w = new List<TReal>(chunkSize);
 			var atts = new List<object>(chunkSize*nameIndices.Length);
 
 			VisualStateManager.GoToState(this, "Loading", true);
-			
-			dataset.Stream.ToObservable().Buffer(chunkSize).SubscribeOn(Scheduler.Default)
-				.Subscribe(dataStreamValues =>
-			{
-				x.Clear(); y.Clear(); w.Clear(); h.Clear(); atts.Clear();
-				foreach (var dataStreamValue in dataStreamValues)
-				{
-					atts.AddRange(from c in nameIndices select dataStreamValue.Values[c]);
-					x.Add((TReal)dataStreamValue.Values[xI]);
-					y.Add((TReal)dataStreamValue.Values[yI]);
-					w.Add((TReal)dataStreamValue.Values[wI]);
-					h.Add((TReal)dataStreamValue.Values[hI]);
-				}
 
-				using (chart.SuspendUpdates())
+			Task.Run(() =>
+			{
+				var bufferedChunks = Buffer(dataset.Stream, chunkSize, false);
+				foreach (var dataStreamValues in bufferedChunks)
 				{
-					series.Append(x, y, w, h, atts);
+					x.Clear(); y.Clear(); w.Clear(); h.Clear(); atts.Clear();
+					foreach (var dataStreamValue in dataStreamValues)
+					{
+						atts.AddRange(from c in nameIndices select dataStreamValue.Values[c]);
+						x.Add((TReal) dataStreamValue.Values[xI]);
+						y.Add((TReal) dataStreamValue.Values[yI]);
+						w.Add((TReal) dataStreamValue.Values[wI]);
+						h.Add((TReal) dataStreamValue.Values[hI]);
+					}
+
+					using (chart.SuspendUpdates())
+					{
+						series.Append(x, y, w, h, atts);
+					}
+					
+					UpdateStatus();
 				}
-				UpdateStatus();
-			}, () => VisualStateManager.GoToState(this, "Idle", true));
+			});
 
 			// README Check adapter
 			var adapter = new RectangleRenderableSeries3(series);
 			chart.RenderableSeries.Add(adapter);
+		}
+
+		private IEnumerable<IList<T>> Buffer<T>(IEnumerable<T> stream, int size, bool newListPerChunk = false)
+		{
+			var r = stream.GetEnumerator();
+			var l = new List<T>(size);
+			while (r.MoveNext())
+			{
+				l.Add(r.Current);
+				if (l.Count < size) continue;
+				yield return l;
+				if (newListPerChunk)
+				{
+					l = new List<T>(size);
+				}
+				else
+				{
+					l.Clear();
+				}
+			}
+
+			if (l.Count > 0)
+			{
+				yield return l;
+			}
 		}
 		
 	}
