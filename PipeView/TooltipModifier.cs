@@ -23,7 +23,8 @@ namespace PipeView
 				Background = new SolidColorBrush(Color.FromRgb(241, 242, 247)),
 				BorderBrush = new SolidColorBrush(Color.FromRgb(118,118,118)),
 				BorderThickness = new Thickness(1.0),
-				Padding = new Thickness(8)
+				Padding = new Thickness(8),
+				Visibility = Visibility.Hidden
 			};
 
 			textBlock = new TextBlock()
@@ -64,8 +65,9 @@ namespace PipeView
 				{
 					continue;
 				}
-				textBlock.Visibility = Visibility.Visible;
-				textBlock.Text = $"{series.AttributeNames[0]?.ToUpper()}: {series.GetAttribute(i.Value, 0)}\nX: {series.XValues[i.Value]:F1}\nY: {series.YValues[i.Value]:F2}";
+
+				tooltipControl.Visibility = Visibility.Visible;
+				textBlock.Text = $"{series.AttributeNames[0]?.ToUpper()}: {series.GetAttribute(i.Value, 0)}\nX: {series.XValues[i.Value]:F1} m\nY: {series.YValues[i.Value]:F2} rad";
 
 				var mp = GetPointRelativeTo(e.MousePoint, ModifierSurface);
 
@@ -73,7 +75,7 @@ namespace PipeView
 				Canvas.SetTop(tooltipControl, mp.Y);
 				return;
 			}
-			textBlock.Visibility = Visibility.Hidden;
+			tooltipControl.Visibility = Visibility.Hidden;
 		}
 	}
 }

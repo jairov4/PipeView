@@ -26,20 +26,28 @@ namespace PipeView
 		public MainWindow()
 		{
 			InitializeComponent();
-			ThemeManager.SetTheme(this, "BrightSpark");
 		}
 
 		private void btnLoadData_OnClick(object sender, RoutedEventArgs e)
 		{
 			var size = int.Parse(txtSizeBox.Text);
 			var dataset = GenerateDataStream(size);
-			CreateSeries(dataset);
+			progressBar.Minimum = 0;
+			progressBar.Maximum = size;
+			brd.Visibility = Visibility.Visible;
+			loadingSeries = CreateSeries(dataset);
 			UpdateStatus();
 		}
 
+		private ISeries loadingSeries;
+
 		protected void UpdateStatus()
 		{
-			Dispatcher.Invoke(() => txtStatus.Text = $"Displaying {chart.RenderableSeries.Sum(s => s.DataSeries.Count)} featues");
+			Dispatcher.Invoke(() =>
+			{
+				txtLoadingStatus.Text = $"Loaded {loadingSeries.Count} featues";
+				progressBar.Value = loadingSeries.Count;
+			});
 		}
 
 		/// <summary>
@@ -47,7 +55,7 @@ namespace PipeView
 		/// </summary>
 		/// <param name="dataset">The dataset.</param>
 		/// <returns>Data series</returns>
-		protected virtual void CreateSeries(DataStream dataset)
+		protected virtual ISeries CreateSeries(DataStream dataset)
 		{
 			var xI = dataset.FieldNames.IndexOf("x");
 			var yI = dataset.FieldNames.IndexOf("y");
@@ -78,6 +86,9 @@ namespace PipeView
 
 			var adapter = new RectangleRenderableSeries(series);
 			chart.RenderableSeries.Add(adapter);
+			brd.Visibility = Visibility.Collapsed;
+
+			return series;
 		}
 
 		/// <summary>

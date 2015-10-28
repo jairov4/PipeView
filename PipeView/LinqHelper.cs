@@ -22,52 +22,39 @@ namespace PipeView
 			}
 			return -1;
 		}
+
 		///<summary>Finds the index of the first occurence of an item in an enumerable.</summary>
 		///<param name="items">The enumerable to search.</param>
 		///<param name="item">The item to find.</param>
 		///<returns>The index of the first matching item, or -1 if the item was not found.</returns>
-		public static int IndexOf<T>(this IEnumerable<T> items, T item) { return items.FindIndex(i => EqualityComparer<T>.Default.Equals(item, i)); }
-	}
-
-	public static class LogIntHelper
-	{
-		public static uint FloorLog2(uint x)
+		public static int IndexOf<T>(this IEnumerable<T> items, T item)
 		{
-			x |= (x >> 1);
-			x |= (x >> 2);
-			x |= (x >> 4);
-			x |= (x >> 8);
-			x |= (x >> 16);
-
-			return (uint)(NumBitsSet(x) - 1);
+			return items.FindIndex(i => EqualityComparer<T>.Default.Equals(item, i));
 		}
-
-		public static uint CeilingLog2(uint x)
+		
+		public static IEnumerable<IList<T>> Buffer<T>(this IEnumerable<T> stream, int size, bool newListPerChunk = false)
 		{
-			int y = (int)(x & (x - 1));
+			var r = stream.GetEnumerator();
+			var l = new List<T>(size);
+			while (r.MoveNext())
+			{
+				l.Add(r.Current);
+				if (l.Count < size) continue;
+				yield return l;
+				if (newListPerChunk)
+				{
+					l = new List<T>(size);
+				}
+				else
+				{
+					l.Clear();
+				}
+			}
 
-			y |= -y;
-			y >>= (WORDBITS - 1);
-			x |= (x >> 1);
-			x |= (x >> 2);
-			x |= (x >> 4);
-			x |= (x >> 8);
-			x |= (x >> 16);
-
-			return (uint)(NumBitsSet(x) - 1 - y);
+			if (l.Count > 0)
+			{
+				yield return l;
+			}
 		}
-
-		public static int NumBitsSet(uint x)
-		{
-			x -= ((x >> 1) & 0x55555555);
-			x = (((x >> 2) & 0x33333333) + (x & 0x33333333));
-			x = (((x >> 4) + x) & 0x0f0f0f0f);
-			x += (x >> 8);
-			x += (x >> 16);
-
-			return (int)(x & 0x0000003f);
-		}
-
-		private const int WORDBITS = 32;
 	}
 }

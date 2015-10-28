@@ -14,7 +14,7 @@ namespace PipeView
 {
 	public class MainWindow2 : MainWindow
 	{
-		protected override void CreateSeries(DataStream dataset)
+		protected override ISeries CreateSeries(DataStream dataset)
 		{
 			var xI = dataset.FieldNames.IndexOf("x");
 			var yI = dataset.FieldNames.IndexOf("y");
@@ -28,7 +28,7 @@ namespace PipeView
 			// README Check series
 			var series = new Series4(names, types);
 			
-			const int chunkSize = 500000;
+			const int chunkSize = 50000;
 			var x = new List<TReal>(chunkSize); var y = new List<TReal>(chunkSize);
 			var h = new List<TReal>(chunkSize); var w = new List<TReal>(chunkSize);
 			var atts = new List<object>(chunkSize*nameIndices.Length);
@@ -37,7 +37,7 @@ namespace PipeView
 
 			Task.Run(() =>
 			{
-				var bufferedChunks = Buffer(dataset.Stream, chunkSize, false);
+				var bufferedChunks = dataset.Stream.Buffer(chunkSize, false);
 				foreach (var dataStreamValues in bufferedChunks)
 				{
 					x.Clear(); y.Clear(); w.Clear(); h.Clear(); atts.Clear();
@@ -57,36 +57,16 @@ namespace PipeView
 					
 					UpdateStatus();
 				}
+
+				Thread.Sleep(1000);
+				Dispatcher.InvokeAsync(() => brd.Visibility = Visibility.Collapsed);
 			});
 
 			// README Check adapter
 			var adapter = new RectangleRenderableSeries3(series);
 			chart.RenderableSeries.Add(adapter);
-		}
 
-		private IEnumerable<IList<T>> Buffer<T>(IEnumerable<T> stream, int size, bool newListPerChunk = false)
-		{
-			var r = stream.GetEnumerator();
-			var l = new List<T>(size);
-			while (r.MoveNext())
-			{
-				l.Add(r.Current);
-				if (l.Count < size) continue;
-				yield return l;
-				if (newListPerChunk)
-				{
-					l = new List<T>(size);
-				}
-				else
-				{
-					l.Clear();
-				}
-			}
-
-			if (l.Count > 0)
-			{
-				yield return l;
-			}
+			return series;
 		}
 		
 	}
