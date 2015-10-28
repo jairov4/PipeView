@@ -44,6 +44,8 @@ namespace PipeView
 			return new Point(xcalc.GetDataValue(p.X), ycalc.GetDataValue(p.Y));
 		}
 
+		StringBuilder strb = new StringBuilder();
+
 		public override void OnModifierMouseMove(ModifierMouseArgs e)
 		{
 			e.Handled = true;
@@ -67,7 +69,13 @@ namespace PipeView
 				}
 
 				tooltipControl.Visibility = Visibility.Visible;
-				textBlock.Text = $"{series.AttributeNames[0]?.ToUpper()}: {series.GetAttribute(i.Value, 0)}\nX: {series.XValues[i.Value]:F1} m\nY: {series.YValues[i.Value]:F2} rad";
+				strb.Clear();
+				for (int j = 0; j < series.AttributeNames.Count; j++)
+				{
+					strb.Append($"{series.AttributeNames[j]?.ToUpper()}: {series.GetAttribute(i.Value, j)}\n");
+				}
+				strb.Append($"X: {series.XValues[i.Value]:F1} m\nY: {series.YValues[i.Value]:F2} rad");
+				textBlock.Text = strb.ToString();
 
 				var mp = GetPointRelativeTo(e.MousePoint, ModifierSurface);
 
@@ -75,6 +83,7 @@ namespace PipeView
 				Canvas.SetTop(tooltipControl, mp.Y);
 				return;
 			}
+
 			tooltipControl.Visibility = Visibility.Hidden;
 		}
 	}

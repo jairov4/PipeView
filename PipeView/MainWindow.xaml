@@ -20,7 +20,7 @@
 		<Border x:Name="brd" Visibility="Collapsed" DockPanel.Dock="Top" Padding="5" Background="#FEFCC8" TextElement.Foreground="#1E1E1E">
 			<DockPanel LastChildFill="True">
 				<ProgressBar x:Name="progressBar" DockPanel.Dock="Right" Margin="20,0,0,0" Value="{Binding Status}" Width="200" />
-				<TextBlock>Loading Data. <Run x:Name="txtLoadingStatus" />. <Hyperlink>Cancel </Hyperlink></TextBlock>
+				<TextBlock><Run x:Name="txtLoadingStatus" />. <Hyperlink>Cancel </Hyperlink></TextBlock>
 			</DockPanel>
 		</Border>
 		<scichart:SciChartScrollbar ZoomLimit="1" Height="20" GripsLength="10" Axis="{Binding ElementName=chart, Path=XAxis}"

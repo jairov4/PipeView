@@ -45,7 +45,7 @@ namespace PipeView
 		{
 			Dispatcher.Invoke(() =>
 			{
-				txtLoadingStatus.Text = $"Loaded {loadingSeries.Count} featues";
+				txtLoadingStatus.Text = $"Loaded {loadingSeries.Count:N0} featues";
 				progressBar.Value = loadingSeries.Count;
 			});
 		}
@@ -98,16 +98,26 @@ namespace PipeView
 		/// <returns>data stream</returns>
 		private DataStream GenerateDataStream(int length)
 		{
+			var adt = 20;
 			var names = new[] { "x", "y", "w", "h", "type" };
 			var types = new[] { typeof(TReal), typeof(TReal), typeof(TReal), typeof(TReal), typeof(string) };
-			var stream = new DataStream(names, types, EnumerateDataStreamValues(length));
+			Array.Resize(ref names, names.Length+adt);
+			Array.Resize(ref types, names.Length + adt);
+			for (int i = 5; i < names.Length; i++)
+			{
+				names[i] = "Field" + i;
+				types[i] = typeof (double);
+			}
+			var stream = new DataStream(names, types, EnumerateDataStreamValues(length, adt));
 			return stream;
 		}
 
-		private IEnumerable<DataStreamValue> EnumerateDataStreamValues(int length)
+		private IEnumerable<DataStreamValue> EnumerateDataStreamValues(int length, int adt)
 		{
 			var rnd = new Random();
 			var types = new[] {"METAL_LOSS", "CRACKING", "UNKNOWN"};
+
+			var innerValues = new List<object>(adt+5);
 			for (var i = 0; i < length; i++)
 			{
 				var x = rnd.NextDouble()*250000.0;
@@ -115,7 +125,18 @@ namespace PipeView
 				var w = rnd.NextDouble()*3.0;
 				var h = rnd.NextDouble()*Math.PI/10;
 				var type = types[rnd.Next(types.Length)];
-				var value = new DataStreamValue(new object[] { (TReal)x, (TReal)y, (TReal)w, (TReal)h, type});
+
+				innerValues.Clear();
+				innerValues.Add((TReal)x);
+				innerValues.Add((TReal)y);
+				innerValues.Add((TReal)w);
+				innerValues.Add((TReal)h);
+				innerValues.Add(type);
+				for (int j = 0; j < adt; j++)
+				{
+					innerValues.Add(rnd.NextDouble() * 10);
+				}
+				var value = new DataStreamValue(innerValues.ToArray());
 				yield return value;
 			}
 		}
