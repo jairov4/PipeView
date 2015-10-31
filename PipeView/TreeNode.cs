@@ -7,6 +7,10 @@ namespace PipeView
 	public class TreeNode
 	{
 		public TreeNode Parent { get; set; }
+		
+		public VisibleRange VerticalRange { get; set; }
+
+		public VisibleRange HorizontalRange { get; set; }
 
 		public List<TreeNode> Nodes { get; }
 
@@ -15,11 +19,7 @@ namespace PipeView
 		public int Height { get; set; }
 
 		public bool IsLeaf => Nodes.Count == 0;
-
-		public VisibleRange VerticalRange { get; set; }
-
-		public VisibleRange HorizontalRange { get; set; }
-
+		
 		public Rect Rect => new Rect(HorizontalRange.Min, VerticalRange.Min, HorizontalRange.Diff, VerticalRange.Diff);
 
 		public bool IsRoot => Parent == null;

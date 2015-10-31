@@ -396,6 +396,7 @@ namespace PipeView
 				newNode.Nodes.AddRange(found.Nodes.Skip(splitIndex));
 				found.Nodes.RemoveRange(splitIndex, found.Nodes.Count - splitIndex);
 			}
+
 			newNode.Parent = parent;
 			parent.Nodes.Add(newNode);
 			

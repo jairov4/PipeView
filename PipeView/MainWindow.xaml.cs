@@ -1,19 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Reactive.Concurrency;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-using Abt.Controls.SciChart;
 using TReal=System.Single;
 
 namespace PipeView
@@ -27,7 +14,7 @@ namespace PipeView
 		{
 			InitializeComponent();
 		}
-
+		
 		private void btnLoadData_OnClick(object sender, RoutedEventArgs e)
 		{
 			var size = int.Parse(txtSizeBox.Text);
@@ -38,7 +25,7 @@ namespace PipeView
 			loadingSeries = CreateSeries(dataset);
 			UpdateStatus();
 		}
-
+		
 		private ISeries loadingSeries;
 
 		protected void UpdateStatus()
@@ -69,9 +56,7 @@ namespace PipeView
 
 			//var atts = new List<object>();
 			//var nameIndices = Enumerable.Range(0, dataset.FieldNames.Count).Except(new[] { xI, yI, wI, hI }).ToArray();
-			//var names = nameIndices.Select(i => dataset.FieldNames[i]).ToArray();
-			//var types = nameIndices.Select(i => dataset.FieldTypes[i]).ToArray();
-
+			
 			foreach (var dataStreamValue in dataset.Stream)
 			{
 				//atts.AddRange(from c in nameIndices select dataStreamValue.Values[c]);
@@ -82,6 +67,9 @@ namespace PipeView
 			}
 
 			var series = new Series1(x, y, w, h);
+
+			//var names = nameIndices.Select(i => dataset.FieldNames[i]).ToArray();
+			//var types = nameIndices.Select(i => dataset.FieldTypes[i]).ToArray();
 			//var series = new Series2(x, y, w, h, names, types, atts);
 
 			var adapter = new RectangleRenderableSeries(series);
